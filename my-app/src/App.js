@@ -1,5 +1,5 @@
 import React from'react';
-import {Form,Card, Container, Jumbotron, FormGroup, Button} from 'react-bootstrap';
+import {ProgressBar,Form,Card, Container, Jumbotron, FormGroup, Button} from 'react-bootstrap';
 import axios from 'axios';
 // import { CardHeader } from 'react-bootstrap/Card';
 
@@ -17,7 +17,8 @@ class UserForm extends React.Component{
             algo : "AES128",
             file: null,
             key : null,
-            buf : null
+            buf : null,
+            uploadPercentage : 0
         };
     };
     handleChange = (event) => {
@@ -69,9 +70,9 @@ class UserForm extends React.Component{
     };
     handleSubmit = (event) => {
         event.preventDefault();
-        this.setState({
-            isDone : !this.state.isDone
-        })
+        // this.setState({
+        //     isDone : !this.state.isDone
+        // })
         if(this.state.isEncrypt === false){
             this.setState({
                 isMd5 : false,
@@ -94,14 +95,31 @@ class UserForm extends React.Component{
         formData.append('file',file);
         formData.append('key',key);
         formData.append('hashMd5',hashMd5);
-        const config = { headers: { 'Content-Type': 'multipart/form-data' }};
+        const config = { 
+            headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: (progressEvent) => {
+                const {loaded, total} = progressEvent;
+                let percent = Math.floor( (loaded * 100) / total )
+                console.log( `${loaded}kb of ${total}kb | ${percent}%` );
+        
+                if( percent < 100 ){
+                  this.setState({ uploadPercentage: percent })
+                }
+              }
+        };
         axios
             .post('http://localhost:8080/submit',formData,config)
             .then((response) => {
-                this.setState({
-                    isDone : !this.state.isDone,
-                    buf : response.data.check,
-                });
+                console.log(this.state.isDone);
+                // this.setState({
+                //     isDone : !this.state.isDone,
+                //     buf : response.data.check,
+                // });
+                this.setState({ isDone : !this.state.isDone,buf : response.data.check, uploadPercentage: 100 }, ()=>{
+                    setTimeout(() => {
+                      this.setState({ uploadPercentage: 0 })
+                    }, 1000);
+                  })
                 console.log(response);
                 return response;
             })
@@ -188,6 +206,7 @@ class UserForm extends React.Component{
                         </FormGroup>
                         }
                         {this.state.isDone ? "" : (<button className="btn btn-primary" type = "submit" > {this.state.option}</button>)}
+                        { this.state.uploadPercentage > 0 && <ProgressBar now={this.state.uploadPercentage} active label={`${this.state.uploadPercentage}%`} /> }
                     </Form>
                     <br/>
                     <Form  action = "http://localhost:8080/download" onSubmit = {(event) => this.handleDownload(event)}>
