@@ -1,6 +1,7 @@
 import React from'react';
-import {Form, Container, Jumbotron, FormGroup} from 'react-bootstrap';
+import {Form,Card, Container, Jumbotron, FormGroup, Button} from 'react-bootstrap';
 import axios from 'axios';
+// import { CardHeader } from 'react-bootstrap/Card';
 
 class UserForm extends React.Component{
     constructor(props) {
@@ -8,10 +9,15 @@ class UserForm extends React.Component{
         this.state = {
             isDone : false,
             isEncrypt : true,
+            isMd5 : false,
+            isIntegrity : true,
+            hashMd5 : null,
+            checkMd5 : false,
             option : "Encrypt",
-            algo : null,
+            algo : "AES128",
             file: null,
-            key : null
+            key : null,
+            buf : null
         };
     };
     handleChange = (event) => {
@@ -24,7 +30,10 @@ class UserForm extends React.Component{
             algo = false;
         this.setState({
           option: value,
-          isEncrypt : algo
+          isEncrypt : algo,
+          isIntegrity : true,
+          checkMd5 : false,
+          isMd5 : false
         });
     };
     handleAlgo = (event) => {
@@ -38,10 +47,11 @@ class UserForm extends React.Component{
         evt.preventDefault();
         this.setState({
             file: evt.target.files[0],
+            isMd5 : false
         });
         if(this.state.isDone === true){
             this.setState({
-                isDone : !this.state.isDone
+                isDone : !this.state.isDone,
             });
         }
     };
@@ -49,30 +59,49 @@ class UserForm extends React.Component{
         evt.preventDefault();
         this.setState({
             key: evt.target.files[0],
+            isMd5 : false
         });
         if(this.state.isDone === true){
             this.setState({
-                isDone : !this.state.isDone
+                isDone : !this.state.isDone,
             });
         }
     };
     handleSubmit = (event) => {
         event.preventDefault();
-        if(this.state.isDone === false){
+        this.setState({
+            isDone : !this.state.isDone
+        })
+        if(this.state.isEncrypt === false){
             this.setState({
-                isDone : !this.state.isDone
-            });
+                isMd5 : false,
+            })
         }
+        else{
+            this.setState({
+                isMd5 : true
+            })
+        }
+        // if(this.state.isDone === false){
+        //     this.setState({
+        //         isDone : !this.state.isDone
+        //     });
+        // }
         const formData = new FormData();
-        const {option,algo,file,key} = this.state;
+        const {option,algo,file,key,hashMd5} = this.state;
         formData.append('option',option);
         formData.append('algo',algo);
         formData.append('file',file);
         formData.append('key',key);
+        formData.append('hashMd5',hashMd5);
         const config = { headers: { 'Content-Type': 'multipart/form-data' }};
         axios
             .post('http://localhost:8080/submit',formData,config)
             .then((response) => {
+                this.setState({
+                    isDone : !this.state.isDone,
+                    buf : response.data.check,
+                });
                 console.log(response);
                 return response;
             })
@@ -81,16 +110,35 @@ class UserForm extends React.Component{
             });
     };
     handleDownload = (event) => {
-        event.preventDefault();
-        const config = { headers: { 'Content-Type': 'multipart/form-data' }};
-        axios
-            .get('http://localhost:8080/download',config)
-            .then((response) => {
-                console.log(response);
-            })
-            .catch(err => {
-                console.error(err.response);
-            });
+        this.setState({
+            isDone : !this.state.isDone
+        });
+        // return true;
+        // const config = { headers: { 'Content-Type': 'multipart/form-data' }};
+        // axios
+        //     .get('http://localhost:8080/download',config)
+        //     .then((response) => {
+        //         console.log("cccccccccccccccccccccccccc");
+        //     })
+        //     .catch(err => {
+        //         console.error(err.response);
+        //     });
+    }
+    yesIntegrity = (event) => {
+        this.setState({
+            isIntegrity : false,
+            checkMd5 : true
+        })
+    }
+    noIntegrity = (event) => {
+        this.setState({
+            isIntegrity : false,
+        })
+    }
+    hashvalue = (event) => {
+        this.setState({
+            hashMd5 : event.target.value
+        })
     }
     render(){
         return(
@@ -108,8 +156,10 @@ class UserForm extends React.Component{
                         <FormGroup controlId = "optionCrypto">
                             <Form.Label>Chọn giải thuật</Form.Label>
                             <Form.Control as = "select" placeholder = "Option" onChange = {(event) => this.handleAlgo(event)}>
+                                <option value = "AES128"> AES-128</option>
+                                <option value = "AES192"> AES-192</option>
+                                <option value = "AES256"> AES-256</option>
                                 <option value = "DES"> DES</option>
-                                <option value = "AES"> AES</option>
                                 <option value = "RSA"> RSA</option>
                             </Form.Control>
                         </FormGroup>
@@ -122,10 +172,27 @@ class UserForm extends React.Component{
                             <Form.Label>Chọn File khóa</Form.Label>
                             <Form.File id = "custom-file-key" label = {this.state.key ? (this.state.key.name) : 'Key'} onChange = {(event) => this.upLoadKey(event)} custom />
                         </FormGroup>
-                        <button className="btn btn-primary" type = "submit" > {this.state.option}</button>
+                        { this.state.isEncrypt? "" : 
+                        <FormGroup controlId = "formIntergrity">
+                            {this.state.isIntegrity ? (<Form.Label>Bạn có muốn kiểm tra tính toàn vẹn sau khi giải mã ?</Form.Label>):""}
+                            {this.state.isIntegrity ? (<Button variant = "outline-primary" onClick = {(event) => this.yesIntegrity(event)}>Có</Button>) : ""}{' '}
+                            {this.state.isIntegrity ? (<Button variant = "outline-danger" onClick = {(event) => this.noIntegrity(event)}>Không</Button>) : ""}
+                            {this.state.checkMd5 ? 
+                            <Form.Label>Nhập Hash Value từ file gốc của bạn </Form.Label>
+                            : ""
+                            }
+                            {this.state.checkMd5 ? 
+                            <Form.Control placeholder = "Hash Value" onChange = {(event) => this.hashvalue(event)}></Form.Control>
+                            : ""
+                            }
+                        </FormGroup>
+                        }
+                        {this.state.isDone ? "" : (<button className="btn btn-primary" type = "submit" > {this.state.option}</button>)}
                     </Form>
-                    <Form onSubmit = {(event) => this.handleDownload(event)} action = "http://localhost:8080/download">
-                        {this.state.isDone ? (<a className= "btn btn-primary" href = "http://localhost:8080/download" >File   {this.state.option}ed  </a>) : '' }
+                    <br/>
+                    <Form  action = "http://localhost:8080/download" onSubmit = {(event) => this.handleDownload(event)}>
+                        {this.state.isDone ? (<button className="btn btn-primary" type = "submit" >Download</button>) : '' }
+                        {this.state.isMd5 ? (<Card><Card.Header>Bạn có thể lưu Hash value sau để đảm bảo tính toàn vẹn khi giải mã</Card.Header><Card.Body>{this.state.buf}</Card.Body></Card>) : ""}
                     </Form>
                 </Jumbotron>
             </Container>

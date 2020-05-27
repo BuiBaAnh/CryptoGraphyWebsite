@@ -6,6 +6,7 @@ const fileUpload = require('express-fileupload');
 const path = require('path');
 const app = express();
 const encryptor = require('file-encryptor');
+const md5 = require('md5');
 
 app.use(
   cors({
@@ -20,6 +21,7 @@ app.use(express.urlencoded({ extended: false }));
 
 
 app.post('/submit', function(req, res) {
+  console.log(req.body);
     if (!req.files) {
       return res.status(500).send({ msg: "file is not found" })
     }
@@ -30,15 +32,34 @@ app.post('/submit', function(req, res) {
             console.log(err)
             return res.status(500).send({ msg: "Error occured" });
         }
-        return res.send({name: myFile.name, path: `/${myFile.name}`});
+        // return res.send({name: myFile.name, path: `/${myFile.name}`});
     });
     myKey.mv(`${__dirname}/Listkey/${myKey.name}`, function (err) {
       if (err) {
           console.log(err)
-          return res.status(500).send({ msg: "Error occured" });
+          // return res.status(500).send({ msg: "Error occured" });
       }
     });
-    const options = { algorithm: 'aes256' };
+    var options = {algorithm : null};
+    switch(req.body.algo){
+      case "DES":
+        options = { algorithm: 'des' };
+        break;
+      case "RSA" :
+        options = { algorithm: 'rsa' };
+        break;
+      case "AES128" : 
+        options = { algorithm: 'aes128' };
+        break;
+      case "AES192" : 
+        options = { algorithm: 'aes192' };
+        break;
+      case "AES256" : 
+        options = { algorithm: 'aes256' };
+        break;
+      default :
+        options = { algorithm: 'aes256' };
+    }
     fs.readFile(__dirname + '/Listkey/' + myKey.name, {encoding :'utf8'},(err,data) => {
       if(err)
         return res.send(err);
@@ -54,20 +75,24 @@ app.post('/submit', function(req, res) {
           //   if(err)
           //     console.log(err);
           //   });
+          // fs.readFile(__dirname + '/Listfile/' + myFile.name,(err,buf) => {
+          //   console.log(md5(buf));
+          //   return res.send({check : md5(buf)});
+          // })
         });
       }
       if(req.body.option === "Decrypt"){
         encryptor.decryptFile(__dirname + '/Listfile/' + myFile.name, __dirname + '/Output/'+ myFile.name.split('.dat')[0], data,options, function(err) {
           // Decryption complete.
           console.log(myFile.name + " decrypted! ");
-          // fs.unlink(__dirname + '/Listkey/' + myKey.name,(err) => {
-          //   if(err)
-          //     console.log(err);
-          //   });
-          // fs.unlink(__dirname + '/Listfile/' + myFile.name,(err) => {
-          //   if(err)
-          //     console.log(err);
-          //   });
+          fs.unlink(__dirname + '/Listkey/' + myKey.name,(err) => {
+            if(err)
+              console.log(err);
+            });
+          fs.unlink(__dirname + '/Listfile/' + myFile.name,(err) => {
+            if(err)
+              console.log(err);
+            });
         });
       }
     });
