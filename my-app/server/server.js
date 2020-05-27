@@ -6,7 +6,7 @@ const fileUpload = require('express-fileupload');
 const path = require('path');
 const app = express();
 const encryptor = require('file-encryptor');
-const md5 = require('md5');
+const md5File = require('md5-file');
 
 app.use(
   cors({
@@ -79,20 +79,24 @@ app.post('/submit', function(req, res) {
           //   console.log(md5(buf));
           //   return res.send({check : md5(buf)});
           // })
+          md5File(__dirname + '/Listfile/' + myFile.name).then((hash) => {
+            return res.send({check : hash});
+          })
         });
       }
       if(req.body.option === "Decrypt"){
         encryptor.decryptFile(__dirname + '/Listfile/' + myFile.name, __dirname + '/Output/'+ myFile.name.split('.dat')[0], data,options, function(err) {
           // Decryption complete.
           console.log(myFile.name + " decrypted! ");
-          fs.unlink(__dirname + '/Listkey/' + myKey.name,(err) => {
-            if(err)
-              console.log(err);
-            });
-          fs.unlink(__dirname + '/Listfile/' + myFile.name,(err) => {
-            if(err)
-              console.log(err);
-            });
+          return res.send({check : null});
+          // fs.unlink(__dirname + '/Listkey/' + myKey.name,(err) => {
+          //   if(err)
+          //     console.log(err);
+          //   });
+          // fs.unlink(__dirname + '/Listfile/' + myFile.name,(err) => {
+          //   if(err)
+          //     console.log(err);
+          //   });
         });
       }
     });
@@ -109,6 +113,18 @@ app.get('/download', function (req, res) {
       });
     });
   })
+  fs.readdir(__dirname + '/Listfile', (err,file) => {
+    fs.unlink(__dirname + '/Listfile/' + file,(err) => {
+      if(err)
+        console.log(err);
+      });
+  } )
+  fs.readdir(__dirname + '/Listkey', (err,file) => {
+    fs.unlink(__dirname + '/Listkey/' + file,(err) => {
+      if(err)
+        console.log(err);
+      });
+  } )
 });
 //start your server on port 3001
 app.listen(8080, () => {
