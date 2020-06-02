@@ -1,6 +1,27 @@
-.header {
-    text-align: center;
-  }
-.h1 {
-    text-align: center;
-}  
+
+.form {
+  padding: 5%;
+  /* background-attachment: fixed; */
+  background-color: rgb(211, 225, 208);
+  background-image: 'https://s27389.pcdn.co/wp-content/uploads/2020/05/network-security-in-world-of-encryption-1024x440.jpeg';
+}
+.name {
+  text-align: center;
+  color : white;
+  padding-bottom: 5%;
+}
+.middle{
+  /* background-color: white; */
+  padding-left: 5%;
+  padding-right: 5%;
+}
+.result {
+  padding-left: 5%;
+  padding-right: 5%;
+}
+.download{
+  margin-bottom: 2% ;
+}
+.upload{
+  margin-bottom: 2%;
+}

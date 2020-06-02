@@ -1,7 +1,16 @@
 import React from'react';
 import {ProgressBar,Form,Card, Container, Jumbotron, FormGroup, Button} from 'react-bootstrap';
 import axios from 'axios';
-// import { CardHeader } from 'react-bootstrap/Card';
+import './App.css';
+import Background1 from './5195ebb8c5f9772deda82aa2937134d3.jpg';
+const sectionStyle1 = {
+  width: "100%",
+  height: "100%",
+  padding : "5%",
+  backgroundImage: `url(${Background1})`,
+  backgroundSize : 'cover',
+};
+
 
 class UserForm extends React.Component{
     constructor(props) {
@@ -18,7 +27,10 @@ class UserForm extends React.Component{
             file: null,
             key : null,
             buf : null,
-            uploadPercentage : 0
+            uploadPercentage : 0,
+            checkIntegrity : 1,
+            isDisplayCheck : false,
+            isDisplay : false
         };
     };
     handleChange = (event) => {
@@ -34,8 +46,14 @@ class UserForm extends React.Component{
           isEncrypt : algo,
           isIntegrity : true,
           checkMd5 : false,
-          isMd5 : false
+          isMd5 : false,
+          isDisplayCheck : false
         });
+        if(this.state.isDone === true){
+            this.setState({
+                isDone : !this.state.isDone,
+            });
+        }
     };
     handleAlgo = (event) => {
         event.preventDefault();
@@ -43,12 +61,18 @@ class UserForm extends React.Component{
         this.setState({
             algo : value
         })
+        if(this.state.isDone === true){
+            this.setState({
+                isDone : !this.state.isDone,
+            });
+        }
     }
     upLoadFile = (evt) => {
         evt.preventDefault();
         this.setState({
             file: evt.target.files[0],
-            isMd5 : false
+            isMd5 : false,
+            isDisplayCheck:false
         });
         if(this.state.isDone === true){
             this.setState({
@@ -60,7 +84,8 @@ class UserForm extends React.Component{
         evt.preventDefault();
         this.setState({
             key: evt.target.files[0],
-            isMd5 : false
+            isMd5 : false,
+            isDisplayCheck:false
         });
         if(this.state.isDone === true){
             this.setState({
@@ -70,9 +95,6 @@ class UserForm extends React.Component{
     };
     handleSubmit = (event) => {
         event.preventDefault();
-        // this.setState({
-        //     isDone : !this.state.isDone
-        // })
         if(this.state.isEncrypt === false){
             this.setState({
                 isMd5 : false,
@@ -83,11 +105,6 @@ class UserForm extends React.Component{
                 isMd5 : true
             })
         }
-        // if(this.state.isDone === false){
-        //     this.setState({
-        //         isDone : !this.state.isDone
-        //     });
-        // }
         const formData = new FormData();
         const {option,algo,file,key,hashMd5} = this.state;
         formData.append('option',option);
@@ -110,12 +127,7 @@ class UserForm extends React.Component{
         axios
             .post('http://localhost:8080/submit',formData,config)
             .then((response) => {
-                console.log(this.state.isDone);
-                // this.setState({
-                //     isDone : !this.state.isDone,
-                //     buf : response.data.check,
-                // });
-                this.setState({ isDone : !this.state.isDone,buf : response.data.check, uploadPercentage: 100 }, ()=>{
+                this.setState({ isDone : !this.state.isDone,buf : response.data.check, uploadPercentage: 100,checkIntegrity : response.data.checked,isDisplayCheck : this.state.isDisplay ? true : false }, ()=>{
                     setTimeout(() => {
                       this.setState({ uploadPercentage: 0 })
                     }, 1000);
@@ -131,21 +143,12 @@ class UserForm extends React.Component{
         this.setState({
             isDone : !this.state.isDone
         });
-        // return true;
-        // const config = { headers: { 'Content-Type': 'multipart/form-data' }};
-        // axios
-        //     .get('http://localhost:8080/download',config)
-        //     .then((response) => {
-        //         console.log("cccccccccccccccccccccccccc");
-        //     })
-        //     .catch(err => {
-        //         console.error(err.response);
-        //     });
     }
     yesIntegrity = (event) => {
         this.setState({
             isIntegrity : false,
-            checkMd5 : true
+            checkMd5 : true,
+            isDisplay : true
         })
     }
     noIntegrity = (event) => {
@@ -155,66 +158,73 @@ class UserForm extends React.Component{
     }
     hashvalue = (event) => {
         this.setState({
-            hashMd5 : event.target.value
+            hashMd5 : event.target.value,
+            isDisplayCheck :false
         })
     }
     render(){
         return(
-            <Container className = "p-3">
-                <Jumbotron>
-                    <h1>Welcome to Cryptopgraphy Website</h1>
-                    <Form onSubmit = {(event) => this.handleSubmit(event)}>
-                        <FormGroup controlId = "optionCrypto">
-                            <Form.Label>Chọn quá trình</Form.Label>
-                            <Form.Control as = "select" placeholder = "Option" onChange = {(event) => this.handleChange(event)}>
-                                <option value = "Encrypt"> Mã hóa</option>
-                                <option value = "Decrypt">Giải mã</option>
-                            </Form.Control>
-                        </FormGroup>
-                        <FormGroup controlId = "optionCrypto">
-                            <Form.Label>Chọn giải thuật</Form.Label>
-                            <Form.Control as = "select" placeholder = "Option" onChange = {(event) => this.handleAlgo(event)}>
-                                <option value = "AES128"> AES-128</option>
-                                <option value = "AES192"> AES-192</option>
-                                <option value = "AES256"> AES-256</option>
-                                <option value = "DES"> DES</option>
-                                <option value = "RSA"> RSA</option>
-                            </Form.Control>
-                        </FormGroup>
-                        <FormGroup controlId = "fileEncrypt">
-                        <Form.Label>{this.state.isEncrypt ? "Chọn file mã hóa" :  "Chọn file giải mã"}</Form.Label>
-                            <Form.File id = "custom-file" label = {this.state.file ? (this.state.file.name):(this.state.isEncrypt ? "File mã hóa" : "File giải mã")} onChange = {(event) => this.upLoadFile(event)} custom  />
-                            <Form.Text className = "text-muted">Chúng tôi sẽ không ghi nhận File của bạn như là dữ liệu của mình</Form.Text>
-                        </FormGroup>
-                        <FormGroup controlId = "fileKey">
-                            <Form.Label>Chọn File khóa</Form.Label>
-                            <Form.File id = "custom-file-key" label = {this.state.key ? (this.state.key.name) : 'Key'} onChange = {(event) => this.upLoadKey(event)} custom />
-                        </FormGroup>
-                        { this.state.isEncrypt? "" : 
-                        <FormGroup controlId = "formIntergrity">
-                            {this.state.isIntegrity ? (<Form.Label>Bạn có muốn kiểm tra tính toàn vẹn sau khi giải mã ?</Form.Label>):""}
-                            {this.state.isIntegrity ? (<Button variant = "outline-primary" onClick = {(event) => this.yesIntegrity(event)}>Có</Button>) : ""}{' '}
-                            {this.state.isIntegrity ? (<Button variant = "outline-danger" onClick = {(event) => this.noIntegrity(event)}>Không</Button>) : ""}
-                            {this.state.checkMd5 ? 
-                            <Form.Label>Nhập Hash Value từ file gốc của bạn </Form.Label>
-                            : ""
+            <div className = "form" style = {sectionStyle1}>
+                <Container className = "p-3">
+                    <h1 className = "name"><i>Welcome to Cryptopgraphy Website</i></h1>
+                        <Jumbotron>
+                        <Form className = "middle"onSubmit = {(event) => this.handleSubmit(event)}>
+                            <FormGroup controlId = "optionCrypto">
+                                <Form.Label><b>Chọn quá trình</b></Form.Label>
+                                <Form.Control as = "select" placeholder = "Option" onChange = {(event) => this.handleChange(event)}>
+                                    <option value = "Encrypt"> Mã hóa</option>
+                                    <option value = "Decrypt">Giải mã</option>
+                                </Form.Control>
+                            </FormGroup>
+                            <FormGroup controlId = "optionCrypto">
+                                <Form.Label><b>Chọn giải thuật</b></Form.Label>
+                                <Form.Control as = "select" placeholder = "Option" onChange = {(event) => this.handleAlgo(event)}>
+                                    <option value = "AES128"> AES-128</option>
+                                    <option value = "AES192"> AES-192</option>
+                                    <option value = "AES256"> AES-256</option>
+                                    <option value = "DES"> DES</option>
+                                    <option value = "RSA"> RSA</option>
+                                </Form.Control>
+                            </FormGroup>
+                            <FormGroup controlId = "fileEncrypt">
+                            <Form.Label>{this.state.isEncrypt ? <b>Chọn file mã hóa</b> :  <b>Chọn file giải mã</b>}</Form.Label>
+                                <Form.File id = "custom-file" label = {this.state.file ? (this.state.file.name):(this.state.isEncrypt ? "File mã hóa" : "File giải mã")} onChange = {(event) => this.upLoadFile(event)} custom  />
+                                <Form.Text className = "text-muted">Chúng tôi sẽ không ghi nhận File của bạn như là dữ liệu của mình</Form.Text>
+                            </FormGroup>
+                            <FormGroup controlId = "fileKey">
+                                <Form.Label><b>Chọn File khóa</b></Form.Label>
+                                <Form.File id = "custom-file-key" label = {this.state.key ? (this.state.key.name) : 'Key'} onChange = {(event) => this.upLoadKey(event)} custom />
+                            </FormGroup>
+                            { this.state.isEncrypt? "" : 
+                            <FormGroup controlId = "formIntergrity">
+                                {this.state.isIntegrity ? (<Form.Label>Bạn có muốn kiểm tra tính toàn vẹn sau khi giải mã ?</Form.Label>):""}
+                                {this.state.isIntegrity ? (<br/> ):''}
+                                {this.state.isIntegrity ? (<Button variant = "outline-primary" onClick = {(event) => this.yesIntegrity(event)}>Có</Button>) : ""}{' '}
+                                {this.state.isIntegrity ? (<Button variant = "outline-danger" onClick = {(event) => this.noIntegrity(event)}>Không</Button>) : ""}
+                                {this.state.checkMd5 ? 
+                                <Form.Label><b>Nhập Hash Value từ file gốc của bạn </b></Form.Label>
+                                : ""
+                                }
+                                {this.state.checkMd5 ? 
+                                <Form.Control placeholder = "Hash Value" onChange = {(event) => this.hashvalue(event)}></Form.Control>
+                                : ""
+                                }
+                            </FormGroup>
                             }
-                            {this.state.checkMd5 ? 
-                            <Form.Control placeholder = "Hash Value" onChange = {(event) => this.hashvalue(event)}></Form.Control>
-                            : ""
+                            {this.state.isDone ? "" : (<Button className = "upload" type = "submit" variant = "outline-info"> {this.state.option}</Button>)}
+                            { this.state.uploadPercentage > 0 && <ProgressBar striped variant="info" animated now={this.state.uploadPercentage}  label={this.state.uploadPercentage.toString() + '%'} /> }<br/>
+                        </Form>
+                        
+                        <Form  className = "result" action = "http://localhost:8080/download" onSubmit = {(event) => this.handleDownload(event)}>
+                            {this.state.isDone ? (  <Button className = "download" type = "submit" variant = "outline-info" size="lg" block>Download</Button>) : '' }
+                            {this.state.isMd5 ? (<Card><Card.Header><i>Bạn có thể lưu Hash value sau để đảm bảo tính toàn vẹn khi giải mã</i></Card.Header><Card.Body>{this.state.buf}</Card.Body></Card>) : ""}
+                            {this.state.isIntegrity ? '':
+                                (this.state.isDisplayCheck ?  (<Card><Card.Header><i>File của bạn</i> {this.state.checkIntegrity ? <i>không </i> : '' }<i>toàn vẹn</i></Card.Header></Card>) : '')
                             }
-                        </FormGroup>
-                        }
-                        {this.state.isDone ? "" : (<button className="btn btn-primary" type = "submit" > {this.state.option}</button>)}
-                        { this.state.uploadPercentage > 0 && <ProgressBar now={this.state.uploadPercentage} active label={`${this.state.uploadPercentage}%`} /> }
-                    </Form>
-                    <br/>
-                    <Form  action = "http://localhost:8080/download" onSubmit = {(event) => this.handleDownload(event)}>
-                        {this.state.isDone ? (<button className="btn btn-primary" type = "submit" >Download</button>) : '' }
-                        {this.state.isMd5 ? (<Card><Card.Header>Bạn có thể lưu Hash value sau để đảm bảo tính toàn vẹn khi giải mã</Card.Header><Card.Body>{this.state.buf}</Card.Body></Card>) : ""}
-                    </Form>
-                </Jumbotron>
-            </Container>
+                        </Form>
+                    </Jumbotron>
+                </Container>
+            </div>
         )
     }
 }

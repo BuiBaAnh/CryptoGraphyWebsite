@@ -21,7 +21,6 @@ app.use(express.urlencoded({ extended: false }));
 
 
 app.post('/submit', function(req, res) {
-  console.log(req.body);
     if (!req.files) {
       return res.status(500).send({ msg: "file is not found" })
     }
@@ -67,36 +66,35 @@ app.post('/submit', function(req, res) {
         encryptor.encryptFile(__dirname + '/Listfile/' + myFile.name, __dirname + '/Output/' + myFile.name + '.dat', data ,options, function(err) {
           // Encryption complete.
           console.log(myFile.name + " encrypted! ");
-          // fs.unlink(__dirname + '/Listkey/' + myKey.name,(err) => {
-          //   if(err)
-          //     console.log(err);
-          //   });
-          // fs.unlink(__dirname + '/Listfile/' + myFile.name,(err) => {
-          //   if(err)
-          //     console.log(err);
-          //   });
-          // fs.readFile(__dirname + '/Listfile/' + myFile.name,(err,buf) => {
-          //   console.log(md5(buf));
-          //   return res.send({check : md5(buf)});
-          // })
           md5File(__dirname + '/Listfile/' + myFile.name).then((hash) => {
             return res.send({check : hash});
           })
+          fs.unlink(__dirname + '/Listkey/' + myKey.name,(err) => {
+            if(err)
+              console.log(err);
+          });
+          fs.unlink(__dirname + '/Listfile/' + myFile.name,(err) => {
+            if(err)
+              console.log(err);
+          });
         });
       }
       if(req.body.option === "Decrypt"){
         encryptor.decryptFile(__dirname + '/Listfile/' + myFile.name, __dirname + '/Output/'+ myFile.name.split('.dat')[0], data,options, function(err) {
           // Decryption complete.
           console.log(myFile.name + " decrypted! ");
-          return res.send({check : null});
-          // fs.unlink(__dirname + '/Listkey/' + myKey.name,(err) => {
-          //   if(err)
-          //     console.log(err);
-          //   });
-          // fs.unlink(__dirname + '/Listfile/' + myFile.name,(err) => {
-          //   if(err)
-          //     console.log(err);
-          //   });
+          md5File(__dirname + '/Output/'+ myFile.name.split('.dat')[0] ).then((hash) => {
+            let check = hash.localeCompare(req.body.hashMd5);
+            return res.send({checked : check });
+          })
+          fs.unlink(__dirname + '/Listkey/' + myKey.name,(err) => {
+            if(err)
+              console.log(err);
+          });
+          fs.unlink(__dirname + '/Listfile/' + myFile.name,(err) => {
+            if(err)
+              console.log(err);
+          });
         });
       }
     });
@@ -113,18 +111,6 @@ app.get('/download', function (req, res) {
       });
     });
   })
-  fs.readdir(__dirname + '/Listfile', (err,file) => {
-    fs.unlink(__dirname + '/Listfile/' + file,(err) => {
-      if(err)
-        console.log(err);
-      });
-  } )
-  fs.readdir(__dirname + '/Listkey', (err,file) => {
-    fs.unlink(__dirname + '/Listkey/' + file,(err) => {
-      if(err)
-        console.log(err);
-      });
-  } )
 });
 //start your server on port 3001
 app.listen(8080, () => {
