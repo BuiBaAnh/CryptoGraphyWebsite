@@ -30,7 +30,9 @@ class UserForm extends React.Component{
             uploadPercentage : 0,
             checkIntegrity : 1,
             isDisplayCheck : false,
-            isDisplay : false
+            isDisplay : false,
+            isFalse : false,
+            error : null,
         };
     };
     handleChange = (event) => {
@@ -47,7 +49,8 @@ class UserForm extends React.Component{
           isIntegrity : true,
           checkMd5 : false,
           isMd5 : false,
-          isDisplayCheck : false
+          isDisplayCheck : false,
+          isFalse : false
         });
         if(this.state.isDone === true){
             this.setState({
@@ -59,7 +62,8 @@ class UserForm extends React.Component{
         event.preventDefault();
         var value = event.target.value;
         this.setState({
-            algo : value
+            algo : value,
+            isFalse : false
         })
         if(this.state.isDone === true){
             this.setState({
@@ -72,7 +76,8 @@ class UserForm extends React.Component{
         this.setState({
             file: evt.target.files[0],
             isMd5 : false,
-            isDisplayCheck:false
+            isDisplayCheck:false,
+            isFalse : false
         });
         if(this.state.isDone === true){
             this.setState({
@@ -85,7 +90,8 @@ class UserForm extends React.Component{
         this.setState({
             key: evt.target.files[0],
             isMd5 : false,
-            isDisplayCheck:false
+            isDisplayCheck:false,
+            isFalse : false
         });
         if(this.state.isDone === true){
             this.setState({
@@ -104,6 +110,38 @@ class UserForm extends React.Component{
             this.setState({
                 isMd5 : true
             })
+        }
+        if((this.state.key == null)){
+            this.setState({
+                isFalse : true,
+                error : 'Bạn cần nhập key để thực thi',
+                isMd5 : false
+            })
+            return;
+        }
+        if((this.state.file == null)){
+            this.setState({
+                isFalse : true,
+                error : 'Bạn cần nhập file để thực thi',
+                isMd5 : false
+            })
+            return;
+        }
+        if(this.state.option === "Decrypt" && this.state.file.name.slice(-4) !== '.dat'){
+            this.setState({
+                isFalse : true,
+                error : 'Sai định dạng file',
+                isMd5 : false
+            })
+            return;
+        }
+        if(this.state.key.name.slice(-4) !== '.txt'){
+            this.setState({
+                isFalse : true,
+                error : 'Key được định dạng file .txt',
+                isMd5 : false
+            })
+            return;
         }
         const formData = new FormData();
         const {option,algo,file,key,hashMd5} = this.state;
@@ -127,7 +165,7 @@ class UserForm extends React.Component{
         axios
             .post('http://localhost:8080/submit',formData,config)
             .then((response) => {
-                this.setState({ isDone : !this.state.isDone,buf : response.data.check, uploadPercentage: 100,checkIntegrity : response.data.checked,isDisplayCheck : this.state.isDisplay ? true : false }, ()=>{
+                this.setState({error : response.data.typeerr, isDone : response.data.isFalse ? this.state.isDone : !this.state.isDone,buf : response.data.check, isFalse : response.data.isFalse ?response.data.isFalse : this.state.isFalse ,uploadPercentage: 100,checkIntegrity : response.data.checked,isDisplayCheck : response.data.isFalse ?  false: this.state.isDisplay ,isMd5 : response.data.isFalse ? false : this.state.isMd5 }, ()=>{
                     setTimeout(() => {
                       this.setState({ uploadPercentage: 0 })
                     }, 1000);
@@ -165,9 +203,9 @@ class UserForm extends React.Component{
     render(){
         return(
             <div className = "form" style = {sectionStyle1}>
-                <Container className = "p-3">
+                <Container className = "cccc">
                     <h1 className = "name"><i>Welcome to Cryptopgraphy Website</i></h1>
-                        <Jumbotron>
+                        {/* <Jumbotron> */}
                         <Form className = "middle"onSubmit = {(event) => this.handleSubmit(event)}>
                             <FormGroup controlId = "optionCrypto">
                                 <Form.Label><b>Chọn quá trình</b></Form.Label>
@@ -218,11 +256,12 @@ class UserForm extends React.Component{
                         <Form  className = "result" action = "http://localhost:8080/download" onSubmit = {(event) => this.handleDownload(event)}>
                             {this.state.isDone ? (  <Button className = "download" type = "submit" variant = "outline-info" size="lg" block>Download</Button>) : '' }
                             {this.state.isMd5 ? (<Card><Card.Header><i>Bạn có thể lưu Hash value sau để đảm bảo tính toàn vẹn khi giải mã</i></Card.Header><Card.Body>{this.state.buf}</Card.Body></Card>) : ""}
+                            {this.state.isFalse ? (<Card><Card.Header><i>{this.state.error}</i></Card.Header></Card>) : ""}
                             {this.state.isIntegrity ? '':
                                 (this.state.isDisplayCheck ?  (<Card><Card.Header><i>File của bạn</i> {this.state.checkIntegrity ? <i>không </i> : '' }<i>toàn vẹn</i></Card.Header></Card>) : '')
                             }
                         </Form>
-                    </Jumbotron>
+                    {/* </Jumbotron> */}
                 </Container>
             </div>
         )
