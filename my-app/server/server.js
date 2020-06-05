@@ -39,6 +39,7 @@ app.post('/submit', function(req, res) {
     });
     const myFile = req.files.file;
     const myKey = req.files.key;
+    console.log(req.body.isFileKey);
     var options = {algorithm : null};
     switch(req.body.algo){
       case "DES":
@@ -67,7 +68,12 @@ app.post('/submit', function(req, res) {
           if(req.body.algo === "RSA"){
             const key = new NodeRSA();
             try{
-              key.importKey(myKey.data);
+              if(req.body.isFileKey === 'file'){
+                key.importKey(myKey.data);
+              }
+              if(req.body.isFileKey === 'nonfile'){
+                key.importKey(req.body.keyEn);
+              }
             }
             catch(err){
               res.send({isFalse : true, typeerr : "Key không phù hợp"});
@@ -110,7 +116,12 @@ app.post('/submit', function(req, res) {
           if(req.body.algo === "RSA"){
             const key = new NodeRSA();
             try{
-              key.importKey(myKey.data);
+              if(req.body.isFileKey === 'file'){
+                key.importKey(myKey.data);
+              }
+              if(req.body.isFileKey === 'nonfile'){
+                key.importKey(req.body.keyDe);
+              }
             }
             catch(err){
               res.send({isFalse : true, typeerr : "Key hoặc File không phù hợp"});
@@ -153,6 +164,10 @@ app.post('/submit', function(req, res) {
         }
       });
     });
+app.post('/gen',(req,res) => {
+  const key = new NodeRSA().generateKeyPair();
+  res.send({keyEn : key.exportKey('pkcs1-public'),keyDe : key.exportKey('pkcs1-private')});
+})
 app.get('/download', function (req, res) { 
     res.download(path.join(__dirname + '/Output/'+fileDownload), function (err) {
       if(err)

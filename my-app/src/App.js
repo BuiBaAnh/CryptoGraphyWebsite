@@ -1,5 +1,5 @@
 import React from'react';
-import {ProgressBar,Form,Card, Container, Jumbotron, FormGroup, Button} from 'react-bootstrap';
+import {Col,ProgressBar,Form,Card, Container,FormGroup, Button, Row} from 'react-bootstrap';
 import axios from 'axios';
 import './App.css';
 import Background1 from './5195ebb8c5f9772deda82aa2937134d3.jpg';
@@ -33,6 +33,7 @@ class UserForm extends React.Component{
             isDisplay : false,
             isFalse : false,
             error : null,
+            isFileKey : 'nonfile'
         };
     };
     handleChange = (event) => {
@@ -63,7 +64,9 @@ class UserForm extends React.Component{
         var value = event.target.value;
         this.setState({
             algo : value,
-            isFalse : false
+            isFalse : false,
+            keyEn : null,
+            keyDe : null
         })
         if(this.state.isDone === true){
             this.setState({
@@ -91,8 +94,18 @@ class UserForm extends React.Component{
             key: evt.target.files[0],
             isMd5 : false,
             isDisplayCheck:false,
-            isFalse : false
+            isFalse : false,
         });
+        if(evt.target.files[0] == null){
+            this.setState({
+                isFileKey : 'nonfile'
+            })
+        }
+        else{
+            this.setState({
+                isFileKey : 'file'
+            })
+        }
         if(this.state.isDone === true){
             this.setState({
                 isDone : !this.state.isDone,
@@ -112,12 +125,20 @@ class UserForm extends React.Component{
             })
         }
         if((this.state.key == null)){
-            this.setState({
-                isFalse : true,
-                error : 'Bạn cần nhập key để thực thi',
-                isMd5 : false
-            })
-            return;
+            if(this.state.algo === "RSA" && this.state.keyEn != null){
+                this.setState({
+                    isFileKey : 'nonfile'
+                })
+            }
+            else{
+                console.log(this.state.keyEn);
+                this.setState({
+                    isFalse : true,
+                    error : 'Bạn cần nhập key để thực thi',
+                    isMd5 : false
+                })
+                return;
+            }
         }
         if((this.state.file == null)){
             this.setState({
@@ -135,21 +156,31 @@ class UserForm extends React.Component{
             })
             return;
         }
-        if(this.state.key.name.slice(-4) !== '.txt'){
-            this.setState({
-                isFalse : true,
-                error : 'Key được định dạng file .txt',
-                isMd5 : false
-            })
-            return;
+        if(this.state.key !=null){
+            if(this.state.key.name.slice(-4) !== '.txt'){
+                this.setState({
+                    isFalse : true,
+                    error : 'Key được định dạng file .txt',
+                    isMd5 : false
+                })
+                return;
+            }
         }
         const formData = new FormData();
-        const {option,algo,file,key,hashMd5} = this.state;
+        const {option,algo,file,key,hashMd5,isFileKey,keyDe,keyEn} = this.state;
         formData.append('option',option);
         formData.append('algo',algo);
         formData.append('file',file);
-        formData.append('key',key);
+        if(key == null){
+            formData.append('key',file);
+        }
+        else{
+            formData.append('key',key);
+        }
+        formData.append('keyDe',keyDe);
+        formData.append('keyEn',keyEn);
         formData.append('hashMd5',hashMd5);
+        formData.append('isFileKey',isFileKey);
         const config = { 
             headers: { 'Content-Type': 'multipart/form-data' },
             onUploadProgress: (progressEvent) => {
@@ -165,7 +196,7 @@ class UserForm extends React.Component{
         axios
             .post('http://localhost:8080/submit',formData,config)
             .then((response) => {
-                this.setState({error : response.data.typeerr, isDone : response.data.isFalse ? this.state.isDone : !this.state.isDone,buf : response.data.check, isFalse : response.data.isFalse ?response.data.isFalse : this.state.isFalse ,uploadPercentage: 100,checkIntegrity : response.data.checked,isDisplayCheck : response.data.isFalse ?  false: this.state.isDisplay ,isMd5 : response.data.isFalse ? false : this.state.isMd5 }, ()=>{
+                this.setState({error : response.data.typeerr, isDone : response.data.isFalse ? this.state.isDone : !this.state.isDone,buf : response.data.check, isFalse : response.data.isFalse ?response.data.isFalse : false ,uploadPercentage: 100,checkIntegrity : response.data.checked,isDisplayCheck : response.data.isFalse ?  false: this.state.isDisplay ,isMd5 : response.data.isFalse ? false : this.state.isMd5 }, ()=>{
                     setTimeout(() => {
                       this.setState({ uploadPercentage: 0 })
                     }, 1000);
@@ -200,12 +231,21 @@ class UserForm extends React.Component{
             isDisplayCheck :false
         })
     }
+    handleGen = (event) => {
+        axios
+            .post('http://localhost:8080/gen')
+            .then((response) => {
+                this.setState({keyEn : response.data.keyEn, keyDe : response.data.keyDe})
+            })
+            .catch(err => {
+                console.error(err.response);
+        });
+    }
     render(){
         return(
             <div className = "form" style = {sectionStyle1}>
                 <Container className = "cccc">
                     <h1 className = "name"><i>Welcome to Cryptopgraphy Website</i></h1>
-                        {/* <Jumbotron> */}
                         <Form className = "middle"onSubmit = {(event) => this.handleSubmit(event)}>
                             <FormGroup controlId = "optionCrypto">
                                 <Form.Label><b>Chọn quá trình</b></Form.Label>
@@ -229,6 +269,17 @@ class UserForm extends React.Component{
                                 <Form.File id = "custom-file" label = {this.state.file ? (this.state.file.name):(this.state.isEncrypt ? "File mã hóa" : "File giải mã")} onChange = {(event) => this.upLoadFile(event)} custom  />
                                 <Form.Text className = "text-muted">Chúng tôi sẽ không ghi nhận File của bạn như là dữ liệu của mình</Form.Text>
                             </FormGroup>
+                            {(this.state.algo === "RSA") ?
+                            <Form.Group controlId="exampleForm.ControlTextarea1">
+                                <Form.Label><b>Sinh khóa tự động</b></Form.Label>
+                                <Row>
+                                    <Col><Form.Control as="textarea" value = {this.state.keyEn} rows="3" cols = "1" /></Col>
+                                    <Col><Form.Control as="textarea" value = {this.state.keyDe} rows="3" cols = "1"/></Col>
+                                </Row>
+                                <Button className = "genKey" onClick = {(event) => this.handleGen(event)} variant = "outline-info"> Generate</Button>
+                            </Form.Group> 
+                            : "" 
+                            }
                             <FormGroup controlId = "fileKey">
                                 <Form.Label><b>Chọn File khóa</b></Form.Label>
                                 <Form.File id = "custom-file-key" label = {this.state.key ? (this.state.key.name) : 'Key'} onChange = {(event) => this.upLoadKey(event)} custom />
@@ -261,7 +312,6 @@ class UserForm extends React.Component{
                                 (this.state.isDisplayCheck ?  (<Card><Card.Header><i>File của bạn</i> {this.state.checkIntegrity ? <i>không </i> : '' }<i>toàn vẹn</i></Card.Header></Card>) : '')
                             }
                         </Form>
-                    {/* </Jumbotron> */}
                 </Container>
             </div>
         )
